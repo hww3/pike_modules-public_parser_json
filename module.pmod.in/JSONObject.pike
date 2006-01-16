@@ -95,10 +95,10 @@ import Public.Parser.JSON;
   /// 6. Make get/put methods private, to force use of indexer instead?
   /// </summary>
 
-		///<summary>The hash map where the JSONObject's properties are kept.</summary>
+		//!The hash map where the JSONObject's properties are kept.</summary>
 		private mapping myHashMap;
 
-		///<summary>A shadow list of keys to enable access by sequence of insertion</summary>
+		//!A shadow list of keys to enable access by sequence of insertion</summary>
 		private array myKeyIndexList;
 
 		/// <summary>
@@ -107,10 +107,8 @@ import Public.Parser.JSON;
 		/// JSONObject.NULL.toString() returns "null".
 		/// </summary>
 
-		/// <summary>
-		///  Construct an empty JSONObject.
-		/// </summary>
-		static void create(void|string|JSONTokener|mapping x)
+		//!  Construct a JSONObject, either empty, from a JSON datastream, or a pike mapping.
+		static void create(void|string|Public.Parser.JSON.JSONTokener|mapping x)
 		{ 
 			myHashMap      = ([]);
 			myKeyIndexList = ({});
@@ -130,9 +128,6 @@ import Public.Parser.JSON;
                      }
 		}
 
-		/// <summary>
-		/// Construct a JSONObject from a JSONTokener.
-		/// </summary>
 		/// <param name="x">A JSONTokener object containing the source string.</param>
 		private void fromtokener(JSONTokener x)
 		{
@@ -249,6 +244,8 @@ import Public.Parser.JSON;
 		/// <summary>
 		/// Return the key for the associated index
 		/// </summary>
+
+//!
 		static mixed `[](mixed i)
 		{
                   if(intp(i))
@@ -257,6 +254,7 @@ import Public.Parser.JSON;
                     return getValue(i);
 		}
 
+//!
                 static void `[]=(mixed key, mixed value)
                 {
                   put(key,value);
@@ -265,6 +263,8 @@ import Public.Parser.JSON;
 		/// <summary>
 		/// Return the number of JSON items in hashtable
 		/// </summary>
+
+//!
 		static int _sizeof()
 		{
 				return sizeof(myHashMap);
@@ -409,11 +409,14 @@ import Public.Parser.JSON;
 		/// Indexers are easier to use
 		/// </summary>
 		/// <returns></returns>
+
+//!
 		static array _indices()
 		{
 			return indices(myHashMap);
 		}
 
+//!
 		static array _values()
 		{
 			return values(myHashMap);
@@ -439,34 +442,6 @@ import Public.Parser.JSON;
 		}
 
 
-		/// <summary>
-		/// Produce a string from a number.
-		/// </summary>
-		/// <param name="number">Number value type object</param>
-		/// <returns>String representation of the number</returns>
-		public string numberToString(mixed number)
-		{
-			if (floatp(number) && !(float)number)
-			{
-				throw(Error.Generic("object must be a valid number"));
-			}
-
-			// Shave off trailing zeros and decimal point, if possible
-			string s = lower_case((string)number);
-			if (search(s, 'e') < 0 && search(s, '.') > 0)
-			{
-				while(has_suffix(s, "0"))
-				{
-					s= s[0..sizeof(s)-2];
-				}
-				if (has_suffix(s, "."))
-				{
-					s=s[0.. sizeof(s)-2];
-				}
-			}
-werror("returning %O\n", s);
-			return s;
-		}
 
 		/// <summary>
 		/// Get an optional value associated with a key.
@@ -639,6 +614,8 @@ werror("returning %O\n", s);
 		/// JSONObject.NULL object.
 		/// </param>
 		/// <returns>JSONObject</returns>
+
+//!
 		public JSONObject put(string key, mixed val)
 		{
 			if (!key)
@@ -685,6 +662,8 @@ werror("returning %O\n", s);
     /// </summary>
     /// <param name="key"></param>
     /// <returns></returns>
+
+//!
 		public mixed remove(string key)
 		{
 			if (myHashMap[key] || !zero_type(myHashMap[key]))
@@ -716,6 +695,7 @@ werror("returning %O\n", s);
 			return ja;
 		}
 
+//!
 static mixed cast(string to)
 {
   if(to =="string")
@@ -751,10 +731,13 @@ static mixed cast(string to)
 					}
 					else if (floatp(obj))
 					{
-                                               werror("encoding float\n");
-						sb+=(numberToString(obj));
+						sb+=(JSONUtils.numberToString(obj));
 					}
 					// boolean is a problem...
+                                        if(arrayp(obj))
+                                        {
+                                           sb+=((string)JSONArray(obj));
+                                        }
 					else
 					{
 						sb+=((string)obj);

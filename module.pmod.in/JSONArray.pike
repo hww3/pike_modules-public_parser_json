@@ -55,9 +55,7 @@ import Public.Parser.JSON;
 		/// <summary>The ArrayList where the JSONArray's properties are kept.</summary>
 		private array myArrayList;
 
-		/// <summary>
-		/// Construct an empty JSONArray
-		/// </summary>
+		//! Construct a JSONArray, empty, from a JSON datastream, or a Pike array.
 		static void create(void|JSONTokener|string|array x)
 		{
 			myArrayList = ({});
@@ -124,11 +122,13 @@ import Public.Parser.JSON;
 		/// Alternate to Java get/put method, by using indexer
 		/// </summary>
 
+//!
                 static mixed `[](mixed i)
                 {
                     return getValue(i);
                 }
 
+//!
                 static void `[]=(mixed key, mixed value)
                 {
                   put(key,value);
@@ -299,6 +299,14 @@ import Public.Parser.JSON;
 				{
 					sb+=(JSONUtils.Enquote(obj));
 				}
+                                else if(intp(obj) || floatp(obj))
+                                {
+                                       sb+=(JSONUtils.numberToString(obj));
+                                }
+                                else if(arrayp(obj))
+                                {
+                                  sb+=((string)JSONArray(obj));
+                                }
 				else
 				{
 					sb+=((string)obj);
@@ -542,6 +550,7 @@ import Public.Parser.JSON;
 		/// </summary>
 		/// <returns>a printable, displayable, transmittable representation of the array.</returns>
 
+//!
 static mixed cast(string to)
 {
   if(to == "string")
@@ -552,5 +561,5 @@ static mixed cast(string to)
 
 		public string ToString()
 		{
-			return '['+ join(",") + ']';
+			return "["+ join(",") + "]";
 		}

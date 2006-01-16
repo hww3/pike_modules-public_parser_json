@@ -1,4 +1,35 @@
 import Public.Parser.JSON;
+
+                /// <summary>
+                /// Produce a string from a number.
+                /// </summary>
+                /// <param name="number">Number value type object</param>
+                /// <returns>String representation of the number</returns>
+                public string numberToString(mixed number)
+                {
+                        if (floatp(number) && !(float)number)
+                        {
+                                throw(Error.Generic("object must be a valid number"));
+                        }
+
+                        // Shave off trailing zeros and decimal point, if possible
+                        string s = lower_case((string)number);
+                        if (search(s, 'e') < 0 && search(s, '.') > 0)
+                        {
+                                while(has_suffix(s, "0"))
+                                {
+                                        s= s[0..sizeof(s)-2];
+                                }
+                                if (has_suffix(s, "."))
+                                {
+                                        s=s[0.. sizeof(s)-2];
+                                }
+                        }
+                        return s;
+                }
+
+
+
 		/// <summary>
 		/// Produce a string in double quotes with backslash sequences in all the right places.
 		/// </summary>
