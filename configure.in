@@ -1,8 +1,7 @@
-# $Id: configure.in,v 1.1 2006-01-16 19:21:30 hww3 Exp $
-AC_INIT(sample_config.h.in)
-
+# $Id: configure.in,v 1.2 2006-01-16 19:43:14 hww3 Exp $
+AC_INIT(CHANGES)
+AC_CONFIG_HEADERS(foo)
 AC_MODULE_INIT()
-AC_CONFIG_HEADERS(CHANGES)
 
 AC_OUTPUT(Makefile)
 
