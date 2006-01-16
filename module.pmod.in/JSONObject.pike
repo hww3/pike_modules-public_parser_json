@@ -1,8 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Specialized;
-using System.Text;
-
 /*
  * A JSONObject is an unordered collection of name/value pairs. Its
  * external form is a string wrapped in curly braces with colons between the
@@ -46,8 +41,6 @@ using System.Text;
  * 4. Add unit testing
  * 5. Add log4net
  */
-namespace Nii.JSON
-{
   /// <summary>
   /// <para>
   /// A JSONArray is an ordered sequence of values. Its external form is a string
@@ -100,114 +93,94 @@ namespace Nii.JSON
   /// 5. Add log4net
   /// 6. Make get/put methods private, to force use of indexer instead?
   /// </summary>
-	public class JSONObject
-	{
-		#region Local struct JSONNull
-		/// <summary>
-    /// Make a Null object
-    /// JSONObject.NULL is equivalent to the value that JavaScript calls null,
-    /// whilst C#'s null is equivalent to the value that JavaScript calls undefined.
-		/// </summary>
-		public struct JSONNull
-		{
-			/*
-			public object clone()
-			{
-				return this;
-			}
-			*/
-			/*
-			public bool equals(object obj)
-			{
-				return (obj == null) || (obj == this);
-			}
-			*/
-      /// <summary>
-      /// Overriden to return "null"
-      /// </summary>
-      /// <returns>null</returns>
-			public override string ToString()
-			{
-				//return base.ToString ();
-				return "null";
-			}
-		}
-		#endregion
 
 		///<summary>The hash map where the JSONObject's properties are kept.</summary>
-		private Hashtable myHashMap;
+		private mapping myHashMap;
 
 		///<summary>A shadow list of keys to enable access by sequence of insertion</summary>
-		private ArrayList myKeyIndexList;
+		private array myKeyIndexList;
 
 		/// <summary>
 		/// It is sometimes more convenient and less ambiguous to have a NULL
 		/// object than to use C#'s null value.
 		/// JSONObject.NULL.toString() returns "null".
 		/// </summary>
-		public static readonly JSONNull NULL = new JSONNull();
+		public JSONNull NULL = JSONNull();
 
-		#region Constructors for JSONObject
 		/// <summary>
 		///  Construct an empty JSONObject.
 		/// </summary>
-		public JSONObject()
-		{
-			myHashMap      = new Hashtable();
-			myKeyIndexList = new ArrayList();
+		static void create(void|string|JSONTokener|mapping x)
+		{ 
+			myHashMap      = ([]);
+			myKeyIndexList = ({});
+
+                     if(objectp(x))
+                     {
+                       fromtokener(x);
+                     }
+                     if(stringp(x))
+                     {
+                       fromtokener(JSONTokener(x));
+                     }
+                     if(mappingp(x))
+                     {
+			myHashMap      = copy_value(map);
+			myKeyIndexList = indices(map);
+                     }
 		}
 
 		/// <summary>
 		/// Construct a JSONObject from a JSONTokener.
 		/// </summary>
 		/// <param name="x">A JSONTokener object containing the source string.</param>
-		public JSONObject(JSONTokener x) : this()
+		private void fromtokener(JSONTokener x)
 		{
-			char c;
+			int c;
 			string key;
-			if (x.next() == '%') 
+			if (x->next() == '%') 
 			{
-				x.unescape();
+				x->unescape();
 			}
-			x.back();
-			if (x.nextClean() != '{') 
+			x->back();
+			if (x->nextClean() != '{') 
 			{
-				throw new Exception("A JSONObject must begin with '{'");
+				throw(Error.Generic("A JSONObject must begin with '{'"));
 			}
-			while (true)
+			while (1)
 			{
-				c = x.nextClean();
+				c = x->nextClean();
 				switch (c) 
 				{
-					case (char)0:
-						throw new Exception("A JSONObject must end with '}'");
+					case 0:
+						throw(Error.Generic("A JSONObject must end with '}'"));
 					case '}':
 						return;
 					default:
-						x.back();
-						key = x.nextObject().ToString();
+						x->back();
+						key = x->nextObject()->ToString();
 						break;
 				}
-				if (x.nextClean() != ':') 
+				if (x->nextClean() != ':') 
 				{
-					throw new Exception("Expected a ':' after a key");
+					throw(Error.Generic("Expected a ':' after a key"));
 				}
-				object obj = x.nextObject();
-				myHashMap.Add(key, obj);
-				myKeyIndexList.Add(key);
-				switch (x.nextClean()) 
+				object obj = x->nextObject();
+				myHashMap[key] = obj;
+				myKeyIndexList+=({key});
+				switch (x->nextClean()) 
 				{
 					case ',':
-						if (x.nextClean() == '}') 
+						if (x->nextClean() == '}') 
 						{
 							return;
 						}
-						x.back();
+						x->back();
 						break;
 					case '}':
 						return;
 					default:
-						throw new Exception("Expected a ',' or '}'");
+						throw(Error.Generic("Expected a ',' or '}'"));
 				}
 			}
 		}
@@ -217,10 +190,6 @@ namespace Nii.JSON
 		/// Construct a JSONObject from a string.
 		/// </summary>
 		/// <param name="sJSON">A string beginning with '{' and ending with '}'.</param>
-		public JSONObject(string sJSON) : this(new JSONTokener(sJSON))
-		{
-
-		}
 
 		// public JSONObject(Hashtable map)
 		// By changing to arg to interface, all classes that implements IDictionary can be used
@@ -242,13 +211,6 @@ namespace Nii.JSON
 		/// Construct a JSONObject from a IDictionary
 		/// </summary>
 		/// <param name="map"></param>
-		public JSONObject(IDictionary map)
-		{
-			myHashMap      = new Hashtable(map);
-			myKeyIndexList = new ArrayList(map);
-		}
-
-		#endregion
 
 		/// <summary>
 		/// Accumulate values under a key. It is similar to the put method except
@@ -264,73 +226,49 @@ namespace Nii.JSON
 		{
 			JSONArray a;
 			object obj = opt(key);
-			if (obj == null)
+			if (obj == 0)
 			{
 				put(key, val);
 			}
-			else if (obj is JSONArray)
+			else if (Program.implements(object_program(obj), JSONArray)
 			{
-				a = (JSONArray)obj;
-				a.put(val);
+				a = obj;
+				a->put(val);
 			}
 			else
 			{
-				a = new JSONArray();
-				a.put(obj);
-				a.put(val);
+				a = JSONArray();
+				a->put(obj);
+				a->put(val);
 				put(key,a);
 			}
 			return this;
 		}
 
 
-		#region C# specific extensions
 		/// <summary>
 		/// Return the key for the associated index
 		/// </summary>
-		public string this[int i]
+		static mixed `[](mixed i)
 		{
-			get
-			{
-				DictionaryEntry de = (DictionaryEntry)myKeyIndexList[i];
-				return de.Key.ToString();
-			}
+                  if(intp(i))
+  		    return (string)myKeyIndexList[i];
+                  else if(stringp(i))
+                    return getValue(i);
 		}
 
-		/// <summary>
-		/// Get/Add an object with the associated key
-		/// </summary>
-		public object this[string key]
-		{
-			get
-			{
-				return getValue(key);
-			}
-			set
-			{
-				put(key,value);
-			}
+                static void `[]=(mixed key, mixed value)
+                {
+                  put(key,value);
 		}
 
 		/// <summary>
 		/// Return the number of JSON items in hashtable
 		/// </summary>
-		public int Count
+		static int _sizeof()
 		{
-			get
-			{
-				return myHashMap.Count;
-			}
+				return sizeof(myHashMap);
 		}
-		/// <summary>
-		/// C# convenience method
-		/// </summary>
-		/// <returns>The Hashtable</returns>
-		public IDictionary getDictionary()
-		{
-			return myHashMap;
-		}
-		#endregion
 
 
 		#region Gettes for a value associated with a key - use indexer instead
@@ -346,7 +284,7 @@ namespace Nii.JSON
 			object obj = opt(key);
 			if (obj == null)
 			{
-				throw new Exception("No such element");
+				throw(Error.Generic("No such element"));
 			}
 			return obj;
 		}
@@ -356,16 +294,16 @@ namespace Nii.JSON
 		/// </summary>
 		/// <param name="key">A key string.</param>
 		/// <returns>The truth.</returns>
-		public bool getBool(string key)
+		public int(0..1) getBool(string key)
 		{
-			object o = getValue(key);
-			if (o is bool)
+			mixed o = getValue(key);
+			if (intp(o))
 			{
-				bool b = (bool)o;
-				return b;
+                                if(o) return 1;
+				else return 0;
 			}
-			string msg = string.Format("JSONObject[{0}] is not a Boolean",JSONUtils.Enquote(key));
-			throw new Exception(msg);
+			string msg = sprintf("JSONObject[%O] is not a Boolean",JSONUtils.Enquote(key));
+			throw(Error.Generic(msg));
 		}
 
 		/// <summary>
@@ -373,20 +311,20 @@ namespace Nii.JSON
 		/// </summary>
 		/// <param name="key">A key string.</param>
 		/// <returns>The double value</returns>
-		public double getDouble(string key)
+		public float getDouble(string key)
 		{
-			object o = getValue(key);
-			if (o is double)
-				return (double)o;
-			if (o is float)
-				return (double)o;
+			mixed o = getValue(key);
+			if (floatp(o))
+				return o;
 
-			if (o is string)
+			if (stringp(o))
 			{
-				return Convert.ToDouble(o);
+                                float f;
+                                sscanf(o, "%f", f);
+				return f;
 			}
-			string msg = string.Format("JSONObject[{0}] is not a double",JSONUtils.Enquote(key));
-			throw new Exception(msg);
+			string msg = sprintf("JSONObject[%O] is not a double",JSONUtils.Enquote(key));
+			throw(Error.Generic(msg));
 		}
 
 		/// <summary>
@@ -396,18 +334,18 @@ namespace Nii.JSON
 		/// <returns> The integer value.</returns>
 		public int getInt(string key)
 		{
-			object o = getValue(key);
-			if (o is int)
+			mixed o = getValue(key);
+			if (intp(o))
 			{
 				return (int)o;
 			}
 
 			if (o is string)
 			{
-				return Convert.ToInt32(o);
+				return (int)(o);
 			}
-			string msg = string.Format("JSONObject[{0}] is not a int",JSONUtils.Enquote(key));
-			throw new Exception(msg);
+			string msg = sprintf("JSONObject[%O] is not a int",JSONUtils.Enquote(key));
+			throw(Error.Generic(msg));
 		}
 
 		/// <summary>
@@ -417,13 +355,13 @@ namespace Nii.JSON
 		/// <returns>A JSONArray which is the value</returns>
 		public JSONArray getJSONArray(string key)
 		{
-			object o = getValue(key);
-			if (o is JSONArray)
+			mixed o = getValue(key);
+			if (objectp(o) && Program.implements(object_program(o), JSONArray))
 			{
-				return (JSONArray)o;
+				return o;
 			}
-			string msg = string.Format("JSONObject[{0}]={1} is not a JSONArray",JSONUtils.Enquote(key),o);
-			throw new Exception(msg);
+			string msg = sprintf("JSONObject[%O] is not a JSONArray",JSONUtils.Enquote(key));
+			throw(Error.Generic(msg));
 		}
 
 		/// <summary>
@@ -433,13 +371,13 @@ namespace Nii.JSON
 		/// <returns>A JSONObject which is the value.</returns>
 		public JSONObject getJSONObject(string key)
 		{
-			object o = getValue(key);
-			if (o is JSONObject)
+		        mixed o = getValue(key);
+			if (objectp(o) && Program.implements(object_program(o), JSONObject))
 			{
-				return (JSONObject)o;
+				return o;
 			}
-			string msg = string.Format("JSONObject[{0}]={1} is not a JSONArray",JSONUtils.Enquote(key),o);
-			throw new Exception(msg);
+			string msg = sprintf("JSONObject[%O] is not a JSONArray",JSONUtils.Enquote(key));
+			throw(Error.Generic(msg));
 		}
 
 		/// <summary>
@@ -449,7 +387,7 @@ namespace Nii.JSON
 		/// <returns>A string which is the value.</returns>
 		public string getString(string key)
 		{
-			return getValue(key).ToString();
+			return (string)getValue(key);
 		}
 		#endregion
 
@@ -459,9 +397,11 @@ namespace Nii.JSON
 		/// </summary>
 		/// <param name="key">A key string.</param>
 		/// <returns>true if the key exists in the JSONObject.</returns>
-		public bool has(string key)
+		public int(0..1) has(string key)
 		{
-			return myHashMap.ContainsKey(key);
+                        if( myHashMap[key])
+  			  return 1;
+                        else return 0;
 		}
 
 
@@ -471,9 +411,9 @@ namespace Nii.JSON
 		/// Indexers are easier to use
 		/// </summary>
 		/// <returns></returns>
-		public IEnumerator keys()
+		static array _indices()
 		{
-			return myHashMap.Keys.GetEnumerator();
+			return indices(myHashMap);
 		}
 
 		/// <summary>
@@ -481,9 +421,9 @@ namespace Nii.JSON
 		/// </summary>
 		/// <param name="key">A key string</param>
 		/// <returns>true if there is no value associated with the key or if the valus is the JSONObject.NULL object</returns>
-		public bool isNull(string key)
+		public int(0..1) isNull(string key)
 		{
-			return JSONObject.NULL.Equals(opt(key));
+			return NULLObject.Equals(opt(key));
 		}
 
 		/// <summary>
@@ -492,58 +432,34 @@ namespace Nii.JSON
 		/// <returns>The number of keys in the JSONObject.</returns>
 		public int Length()
 		{
-			return myHashMap.Count;
+			return sizeof(myHashMap);
 		}
 
-		/// <summary>
-		/// Produce a JSONArray containing the names of the elements of this JSONObject
-		/// </summary>
-		/// <returns>A JSONArray containing the key strings, or null if the JSONObject</returns>
-		public JSONArray names()
-		{
-			JSONArray ja = new JSONArray();
-
-			//NOTE!! I choose to use keys stored in the ArrayList, to maintain sequence order
-			foreach (string key in myKeyIndexList)
-			{
-				ja.put(key);
-			}
-			if (ja.Length() == 0)
-			{
-				return null;
-			}
-			return ja;
-		}
 
 		/// <summary>
 		/// Produce a string from a number.
 		/// </summary>
 		/// <param name="number">Number value type object</param>
 		/// <returns>String representation of the number</returns>
-		public string numberToString(object number)
+		public string numberToString(mixed number)
 		{
-			if (number is float && ((float)number) == float.NaN)
+			if (floatp(number) && !(float)number))
 			{
 				string msg = string.Format("");
-				throw new ArgumentException("object must be a valid number", "number");
-			}
-			if (number is double && ((double)number) == double.NaN)
-			{
-				string msg = string.Format("");
-				throw new ArgumentException("object must be a valid number", "number");
+				throw(Error.Generic("object must be a valid number"));
 			}
 
 			// Shave off trailing zeros and decimal point, if possible
-			string s = number.ToString().ToLower();
-			if (s.IndexOf('e') < 0 && s.IndexOf('.') > 0)
+			string s = lower_case((string)number);
+			if (search(s, 'e') < 0 && search(s, '.') > 0)
 			{
-				while(s.EndsWith("0"))
+				while(has_suffix(s, "0"))
 				{
-					s.Substring(0,s.Length-1);
+					s= s[0,sizeof(s)-1)];
 				}
-				if (s.EndsWith("."))
+				if (has_suffix(s, "."))
 				{
-					s.Substring(0,s.Length-1);
+					s=s[0,s.Length-1];
 				}
 			}
 			return s;
@@ -555,26 +471,15 @@ namespace Nii.JSON
 		/// </summary>
 		/// <param name="key">A key string</param>
 		/// <returns>An object which is the value, or null if there is no value.</returns>
-		public object opt(string key)
+		public mixed opt(string key)
 		{
-			if (key == null)
+			if (!key)
 			{
-				throw new ArgumentNullException("key", "Null key");
+				throw(Error.Generic("Null key"));
 			}
 			return myHashMap[key];
 		}
 
-		/// <summary>
-		/// Get an optional value associated with a key.
-		/// It returns false if there is no such key, or if the value is not
-		/// Boolean.TRUE or the String "true".
-		/// </summary>
-		/// <param name="key">A key string.</param>
-		/// <returns>bool value object</returns>
-		public bool optBoolean(string key)
-		{
-			return optBoolean(key, false);
-		}
 
 		/// <summary>
 		/// Get an optional value associated with a key.
@@ -584,33 +489,30 @@ namespace Nii.JSON
 		/// <param name="key">A key string.</param>
 		/// <param name="defaultValue">The preferred return value if conversion fails</param>
 		/// <returns>bool value object</returns>
-		public bool optBoolean(string key, bool defaultValue)
+		public int(0..1) optBoolean(string key, void|int(0..1) defaultValue)
 		{
-			object obj = opt(key);
-			if (obj != null)
+			mixed obj = opt(key);
+			if (obj)
 			{
-				if (obj is bool)
-					return (bool)obj;
-				if (obj is string)
+				if (intp(obj))
+                                {
+                                   if(obj)
+                                   {
+                                     return 1;
+                                   }
+                                   else return 0;
+                                }
+				if (stringp(obj))
 				{
-					return Convert.ToBoolean(obj);
+                                  if(obj == "true")
+                                    return 1;
+                                  if(obj == "false")
+                                    return 0;
 				}
 			}
 			return defaultValue;
 		}
 
-		/// <summary>
-		/// Get an optional double associated with a key,
-		/// or NaN if there is no such key or if its value is not a number.
-		/// If the value is a string, an attempt will be made to evaluate it as
-		/// a number.
-		/// </summary>
-		/// <param name="key">A string which is the key.</param>
-		/// <returns>A double value object</returns>
-		public double optDouble(string key)
-		{
-			return optDouble(key, double.NaN);
-		}
 
 		/// <summary>
 		/// Get an optional double associated with a key,
@@ -621,34 +523,23 @@ namespace Nii.JSON
 		/// <param name="key">A string which is the key.</param>
 		/// <param name="defaultValue">The default</param>
 		/// <returns>A double value object</returns>
-		public double optDouble(string key, double defaultValue)
+		public float optFloat(string key, float|void defaultValue)
 		{
-			object obj = opt(key);
-			if (obj != null)
+			mixed obj = opt(key);
+			if (obj)
 			{
-				if (obj is double)
-					return (double)obj;
-				if (obj is float)
-					return (double)obj;
-				if (obj is string)
+				if (floatp(obj))
+                                  return obj;
+                                if(intp(obj))
+                                  return (float)obj;
+				if (stringp(obj))
 				{
-					return Convert.ToDouble(obj);
+					return (float)obj;
 				}
 			}
 			return defaultValue;
 		}
 
-		/// <summary>
-	  ///  Get an optional double associated with a key, or the
-	  ///  defaultValue if there is no such key or if its value is not a number.
-	  ///  If the value is a string, an attempt will be made to evaluate it as
-	  ///  number.
-		/// </summary>
-		/// <param name="key">A key string.</param>
-		/// <returns>An int object value</returns>
-		public int optInt(string key)
-		{
-			return optInt(key, 0);
 		}
 
 		/// <summary>
@@ -660,15 +551,15 @@ namespace Nii.JSON
 		/// <param name="key">A key string.</param>
 		/// <param name="defaultValue">The default value</param>
 		/// <returns>An int object value</returns>
-		public int optInt(string key, int defaultValue)
+		public int optInt(string key, int|void defaultValue)
 		{
-			object obj = opt(key);
-			if (obj != null)
+			mixed obj = opt(key);
+			if (obj)
 			{
-				if (obj is int)
+				if (intp(obj))
 					return (int)obj;
-				if (obj is string)
-					return Convert.ToInt32(obj);
+				if (stringp(obj))
+					return (string)obj;
 			}
 			return defaultValue;
 		}
@@ -681,12 +572,12 @@ namespace Nii.JSON
 		/// <returns>A JSONArray which is the value</returns>
 		public JSONArray optJSONArray(string key)
 		{
-			object obj = opt(key);
-			if (obj is JSONArray)
+			mixed obj = opt(key);
+			if (objectp(obj) && Program.implements(object_program(obj), JSONArray))
 			{
-				return (JSONArray)obj;
+				return obj;
 			}
-			return null;
+			return 0;
 		}
 
 		/// <summary>
@@ -697,12 +588,12 @@ namespace Nii.JSON
 		/// <returns>A JSONObject which is the value</returns>
 		public JSONObject optJSONObject(string key)
 		{
-			object obj = opt(key);
-			if (obj is JSONObject)
+			mixed obj = opt(key);
+			if (obj && Program.implements(object_program(obj), JSONObject))
 			{
-				return (JSONObject)obj;
+				return obj;
 			}
-			return null;
+			return 0;
 		}
 
 		/// <summary>
@@ -728,10 +619,10 @@ namespace Nii.JSON
 		/// <returns>A string which is the value.</returns>
 		public string optString(string key, string defaultValue)
 		{
-			object obj = opt(key);
+			mixed obj = opt(key);
 			if (obj != null)
 			{
-				return obj.ToString();
+				return (string)obj;
 			}
 			return defaultValue;
 		}
@@ -755,19 +646,18 @@ namespace Nii.JSON
 		/// JSONObject.NULL object.
 		/// </param>
 		/// <returns>JSONObject</returns>
-		public JSONObject put(string key, object val)
+		public JSONObject put(string key, mixed val)
 		{
-			if (key == null)
+			if (!key)
 			{
-				throw new ArgumentNullException("key", "key cannot be null");
+				throw(Error.Generic("key cannot be null"));
 			}
-			if (val != null)
+			if (!val && !zero_type(val))
 			{
-				if (!myHashMap.ContainsKey(key))
+				if (!myHashMap[key] && !zero_type(myHashMap[key]))
 				{
-					string test = key;
-					myHashMap.Add(key,val);
-					myKeyIndexList.Add(key);
+					myHashMap[key]=val;
+					myKeyIndexList+=({key});
 				}
 				else
 				{
@@ -787,32 +677,32 @@ namespace Nii.JSON
     /// <param name="key"></param>
     /// <param name="val"></param>
     /// <returns></returns>
-		public JSONObject putOpt(string key, object val)
+		public JSONObject putOpt(string key, mixed val)
 		{
-			if (val != null)
+			if (!val && !zero_type(val))
 			{
 				put(key,val);
 			}
 			return this;
 		}
-		#endregion
+
 
     /// <summary>
     /// Remove a object assosiateted with the given key
     /// </summary>
     /// <param name="key"></param>
     /// <returns></returns>
-		public object remove(string key)
+		public mixed remove(string key)
 		{
-			if (myHashMap.ContainsKey(key))
+			if (myHashMap[key] || !zero_type(myHashMap[key]))
 			{
 				// TODO - does it really work ???
-				object obj = myHashMap[key];
-				myHashMap.Remove(key);
-				myKeyIndexList.Remove(key);
+				mixed obj = myHashMap[key];
+				m_delete(myHashMap, key);
+				myKeyIndexList-=({key});
 				return obj;
 			}
-			return null;
+			return UNDEFINED;
 		}
 
     /// <summary>
@@ -822,13 +712,13 @@ namespace Nii.JSON
     /// <returns></returns>
 		public JSONArray toJSONArray(JSONArray names)
 		{
-			if (names == null | names.Length() == 0)
-				return null;
+			if (!names || sizeof(names) == 0)
+				return UNDEFINED;
 
-			JSONArray ja = new JSONArray();
-			for (int i=0; i<names.Length(); i++)
+			JSONArray ja = JSONArray();
+			for (int i=0; i<sizeof(names); i++)
 			{
-				ja.put(this.opt(names.getString(i)));
+				ja->put(this->opt(names->getString(i)));
 			}
 			return ja;
 		}
@@ -839,41 +729,36 @@ namespace Nii.JSON
     /// <returns>JSON object as formatted string</returns>
 		public override string ToString()
 		{
-			object obj = null;
+			mixed obj;
 			//string s;
-			StringBuilder sb = new StringBuilder();
+			String.Buffer sb = new String.Buffer();
 
-			sb.Append('{');
-			foreach (string key in myHashMap.Keys)  //NOTE! Could also use myKeyIndexList !!!
+			sb+=("{");
+			foreach (myHashMap;string key;mixed val)  //NOTE! Could also use myKeyIndexList !!!
 			{
-				if (obj != null)
-					sb.Append(',');
+				if (obj)
+					sb+=(",");
 				obj = myHashMap[key];
-				if (obj != null)
+				if (obj)
 				{
-					sb.Append(JSONUtils.Enquote(key));
-					sb.Append(':');
+					sb+=(JSONUtils.Enquote(key));
+					sb+=(":");
 
-					if (obj is string)
+					if (stringp(obj))
 					{
-						sb.Append(JSONUtils.Enquote((string)obj));
+					   sb+=(JSONUtils.Enquote(obj));
 					}
-					else if (obj is float || obj is double)
+					else if (floatp(obj))
 					{
-						sb.Append(numberToString(obj));
+						sb+=(numberToString(obj));
 					}
-					else if (obj is bool)
-					{
-						sb.Append(obj.ToString().ToLower());
-					}
+					// boolean is a problem...
 					else
 					{
-						sb.Append(obj.ToString());
+						sb+=(obj->ToString());
 					}
 				}
 			}
-			sb.Append('}');
-			return sb.ToString();
+			sb+=("}");
+			return sb->get();
 		}
-	}
-}
