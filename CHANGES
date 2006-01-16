@@ -1,0 +1,5 @@
+Version 1.0
+-----------
+
+- initial release of Public.Parser.JSON, almost directly converted from C#.
+- serializes and deserializes JSON streams.

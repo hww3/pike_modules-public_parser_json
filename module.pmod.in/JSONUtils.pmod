@@ -1,3 +1,4 @@
+import Public.Parser.JSON;
 		/// <summary>
 		/// Produce a string in double quotes with backslash sequences in all the right places.
 		/// </summary>

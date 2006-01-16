@@ -1,0 +1,24 @@
+Welcome to Public.Parser.JSON!
+
+This module is designed to read JSON (http://www.json.org) 
+files, converting them to the appropriate Pike datatypes, as 
+well as converting Pike datatypes into the appropriate JSON 
+datastreams.
+
+Usage:
+
+string s = "{somejsonstream}";
+
+object j = Public.Parser.JSON.JSONObject(s);
+
+(mapping)j;
+or
+indices(j); values(j);, etc...
+
+(string)j; <-- serializes the pike datatype into a JSON string.
+
+mapping m = {[some data]);
+
+object j = Public.Parser.JSON.JSONObject(m);
+
+(string)j; <-- a JSON datastream

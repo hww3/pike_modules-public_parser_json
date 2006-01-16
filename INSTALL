@@ -1,0 +1,4 @@
+to install this module, run the following commands:
+
+pike -x module 
+pike -x module install

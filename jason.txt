@@ -1,0 +1,20 @@
+{
+    "this test"  : true,
+    "ThreeDSort" : {
+        z : 9.323
+    },
+    "x y" : "x y",
+    yPos  : {
+        "inner"  : [2,4],
+        "outer"  : [4,8,4,8]
+    },
+    "props": [ true, null, false],
+    "oldVals": [ "oldvals1", {innermost:"old+inner"}, "oldvals3"],
+    y1   : {
+        z  : "value"
+    },
+    "xy and z": "xy and z",
+    y3   : {
+        z2  : "z2"
+    }
+};
