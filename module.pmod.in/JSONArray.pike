@@ -51,47 +51,59 @@
   /// 6. Make get/put methods private, to force use of indexer instead?
   /// </summary>
 		/// <summary>The ArrayList where the JSONArray's properties are kept.</summary>
-		private ArrayList myArrayList;
+		private array myArrayList;
 
 		/// <summary>
 		/// Construct an empty JSONArray
 		/// </summary>
-		static void create()
+		static void create(void|JSONTokener|string|array x)
 		{
-			myArrayList = new ArrayList();
+			myArrayList = ({});
+                     if(stringp(x))
+                     {
+                       fromtokener(JSONTokener(x));
+                     }
+                     if(objectp(x))
+                     {
+                       fromtokener(x);
+                     }
+                     if(arrayp(x))
+                     {
+                       myArrayList = copy_value(x);
+                     }
 		}
 
 		/// <summary>
 		/// Construct a JSONArray from a JSONTokener.
 		/// </summary>
 		/// <param name="x">A JSONTokener</param>
-		public JSONArray(JSONTokener x) : this()
+		public void fromtokener(JSONTokener x)
 		{
-			if (x.nextClean() != '[') 
+			if (x->nextClean() != '[') 
 			{
-				throw new Exception("A JSONArray must start with '['");
+				throw(Error.Generic("A JSONArray must start with '['"));
 			}
-			if (x.nextClean() == ']') 
+			if (x->nextClean() == ']') 
 			{
 				return;
 			}
-			x.back();
-			while (true) 
+			x->back();
+			while (1) 
 			{
-				myArrayList.Add(x.nextObject());
-				switch (x.nextClean()) 
+				myArrayList+=({x->nextObject()});
+				switch (x->nextClean()) 
 				{
 					case ',':
-						if (x.nextClean() == ']') 
+						if (x->nextClean() == ']') 
 						{
 							return;
 						}
-						x.back();
+						x->back();
 						break;
 					case ']':
 						return;
 					default:
-						throw new Exception("Expected a ',' or ']'");
+						throw(Error.Generic("Expected a ',' or ']'"));
 				}
 			}
 		}
@@ -100,63 +112,34 @@
 		/// Construct a JSONArray from a source string.
 		/// </summary>
 		/// <param name="s">A string that begins with '[' and ends with ']'.</param>
-		public JSONArray(string s) : this(new JSONTokener(s))
-		{
-		}
 
 		/// <summary>
 		/// Construct a JSONArray from a Collection.
 		/// </summary>
 		/// <param name="collection">A Collection.</param>
-		public JSONArray(ICollection collection)
-		{
-			myArrayList = new ArrayList(collection);
-		}
-		#endregion
 
-		#region C# extensions. Indexer and property
 		/// <summary>
 		/// Alternate to Java get/put method, by using indexer
 		/// </summary>
-		public object this[int i]
-		{
-			get
-			{
-				return opt(i);
-			}
-			set
-			{
-				//myArrayList[i] = value;
-				put(i, value);
-			}
-		}
 
-		/// <summary>
-		/// Alternativ to Java, getArrayList, by using propery
-		/// </summary>
-		public IList List
-		{
-			get
-			{
-				return myArrayList;
-			}
-		}
-		#endregion
+                static mixed `[](mixed i)
+                {
+                    return getValue(i);
+                }
 
-		#region Getters for a value associated with an index.
-		/// <summary>
-		/// Get the object value associated with an index.
-		/// Use indexer instead!!! Added to be true to the original Java implementation
-		/// </summary>
-		/// <param name="i">index subscript. The index must be between 0 and length()-1</param>
-		/// <returns>An object value.</returns>
-		public object getValue(int i)
+                static void `[]=(mixed key, mixed value)
+                {
+                  put(key,value);
+                }
+
+
+		public mixed getValue(int i)
 		{
-			object obj = opt(i);
-			if (obj == null)
+			mixed obj = opt(i);
+			if (!obj && zero_type(obj))
 			{
-				string msg = string.Format("JSONArray[{0}] not found", i);
-				throw new Exception(msg);
+				string msg = sprintf("JSONArray[%O] not found", i);
+				throw(Error.Generic(msg));
 			}
 			return obj;
 			//return myArrayList[i];
@@ -167,7 +150,7 @@
 		/// Use the indexer instead!! Added to be true to the orignal Java src
 		/// </summary>
 		/// <returns>The ArrayList</returns>
-		public IList getArrayList()
+		public array getArrayList()
 		{
 			return myArrayList;
 		}
@@ -178,15 +161,16 @@
 		/// </summary>
 		/// <param name="i">index subscript</param>
 		/// <returns>The truth</returns>
-		public bool getBoolean(int i)
+		public int(0..1) getBoolean(int i)
 		{
 			object obj = getValue(i);
-			if (obj is bool)
+			if (intp(obj))
 			{
-				return (bool)obj;
+	                  if(obj) return 1;
+                          else return 0;
 			}
-			string msg = string.Format("JSONArray[{0}]={1} not a Boolean", i, obj);
-			throw new Exception(msg);
+			string msg = sprintf("JSONArray[%O]=%O not a Boolean", i, obj);
+			throw(Error.Generic(msg));
 		}
 
 		/// <summary>
@@ -194,20 +178,21 @@
 		/// </summary>
 		/// <param name="i">index subscript</param>
 		/// <returns>A double value</returns>
-		public double getDouble(int i)
+		public float getDouble(int i)
 		{
-			object obj = getValue(i);
-			if (obj is double)
-				return (double)obj;
-			if (obj is float)
-				return (double)obj;
-			if (obj is string)
-			{
-				return Convert.ToDouble(obj);
-			}
-			string msg = string.Format("JSONArray[{0}]={1} not a double", i, obj);
-			throw new Exception(msg);
-		}
+                        mixed o = getValue(i);
+                        if (floatp(o))
+                                return o;
+
+                        if (stringp(o))
+                        {
+                                float f;
+                                sscanf(o, "%f", f);
+                                return f;
+                        }
+                        string msg = sprintf("JSONArray[%O] is not a double", i);
+                        throw(Error.Generic(msg));
+		 }
 
 		/// <summary>
 		/// Get the int value associated with an index.
@@ -216,15 +201,19 @@
 		/// <returns>The int value</returns>
 		public int getInt(int i)
 		{
-			object obj = getValue(i);
-			if (obj is int)
-				return (int)obj;
-			if (obj is string)
-			{
-				return Convert.ToInt32(obj);
-			}
-			string msg = string.Format("JSONArray[{0}]={1} not a int", i, obj);
-			throw new Exception(msg);
+                        mixed o = getValue(i);
+                        if (intp(o))
+                        {
+                                return (int)o;
+                        }
+
+                        if (stringp(o))
+                        {
+                                return (int)(o);
+                        }
+                        string msg = sprintf("JSONArray[%O] is not a int", i);
+                        throw(Error.Generic(msg));
+
 		}
 
 		/// <summary>
@@ -234,13 +223,13 @@
 		/// <returns>A JSONArray value</returns>
 		public JSONArray getJSONArray(int i)
 		{
-			object obj = getValue(i);
-			if (obj is JSONArray)
-			{
-				return (JSONArray)obj;
-			}
-			string msg = string.Format("JSONArray[{0}]={1} not a JSONArray", i, obj);
-			throw new Exception(msg);
+                        mixed o = getValue(i);
+                        if (objectp(o) && Program.implements(object_program(o), JSONArray))
+                        {
+                                return o;
+                        }
+                        string msg = sprintf("JSONObject[%O] is not a JSONArray", i);
+                        throw(Error.Generic(msg));
 		}
 
 		/// <summary>
@@ -250,13 +239,14 @@
 		/// <returns>A JSONObject value</returns>
 		public JSONObject getJSONObject(int i)
 		{
-			object obj = getValue(i);
-			if (obj is JSONObject)
-			{
-				return (JSONObject)obj;
-			}
-			string msg = string.Format("JSONArray[{0}]={1} not a JSONObject", i, obj);
-			throw new Exception(msg);
+                       mixed o = getValue(i);
+                        if (objectp(o) && Program.implements(object_program(o), JSONObject))
+                        {
+                                return o;
+                        }
+                        string msg = sprintf("JSONArray[%O] is not a JSONArray", i);
+                        throw(Error.Generic(msg));
+
 		}
 
 		/// <summary>
@@ -266,25 +256,18 @@
 		/// <returns>A string value.</returns>
 		public string getString(int i)
 		{
-			object obj = getValue(i);
-			if (obj is string)
-			{
-				return (string)obj;
-			}
-			string msg = string.Format("JSONArray[{0}]={1} not a string", i, obj);
-			throw new Exception(msg);
+			 return (string)getValue(i);
 		}
-		#endregion
 
 		/// <summary>
 		/// Determine if the value is null.
 		/// </summary>
 		/// <param name="i">index subscript</param>
 		/// <returns>true if the value at the index is null, or if there is no value.</returns>
-		public bool isNull(int i)
+		public int(0..1) isNull(int i)
 		{
-			object obj = opt(i);
-			return (obj == null || obj.Equals(null));
+			mixed obj = opt(i);
+			return (!obj);
 		}
 
 		/// <summary>
@@ -296,34 +279,30 @@
 		/// <returns>A string.</returns>
 		public string join(string separator)
 		{
-			object obj;
-			StringBuilder sb = new StringBuilder();
-			for (int i=0; i<myArrayList.Count; i++)
+			mixed obj;
+			String.Buffer sb = String.Buffer();
+			for (int i=0; i<sizeof(myArrayList); i++)
 			{
 				if (i > 0)
 				{
-					sb.Append(separator);
+					sb+=(separator);
 				}
 				obj = myArrayList[i];
 
-				if (obj == null)
+				if (!obj)
 				{
-					sb.Append("");
+					sb+=("");
 				}
-				else if (obj is string)
+				else if (stringp(obj))
 				{
-					sb.Append(JSONUtils.Enquote((string)obj));
-				}
-				else if (obj is int)
-				{
-					sb.Append(((int)obj).ToString());
+					sb+=(JSONUtils.Enquote(obj));
 				}
 				else
 				{
-					sb.Append(obj.ToString());
+					sb+=((string)obj);
 				}
 			}
-			return sb.ToString();
+			return sb->get();
 		}
 
 		/// <summary>
@@ -333,44 +312,22 @@
 		/// <returns>Number of JSONObjects in array</returns>
 		public int Length()
 		{
-			return myArrayList.Count;
-		}
-		/// <summary>
-		/// Get the length of the JSONArray.
-		/// Using a propery instead of method
-		/// </summary>
-		public int Count
-		{
-			get
-			{
-				return myArrayList.Count;
-			}
+			return sizeof(myArrayList);
 		}
 
-
-		#region Get the optional value associated with an index.
 		/// <summary>
 		/// Get the optional object value associated with an index.
 		/// </summary>
 		/// <param name="i">index subscript</param>
 		/// <returns>object at that index.</returns>
-		public object opt(int i)
+		public mixed opt(int i)
 		{
-			if (i < 0 || i >= myArrayList.Count)
-				throw new ArgumentOutOfRangeException("int i", i, "Index out of bounds!");
+			if (i < 0 || i >= sizeof(myArrayList))
+				throw(Error.Generic("Index out of bounds!"));
 
 			return myArrayList[i];
 		}
 
-		/// <summary>
-		/// Get the optional boolean value associated with an index.
-		/// </summary>
-		/// <param name="i">index subscript</param>
-		/// <returns>The truth</returns>
-		public bool optBoolean(int i)
-		{
-			return optBoolean(i,false);
-		}
 
 		/// <summary>
 		/// Get the optional boolean value associated with an index.
@@ -380,26 +337,14 @@
 		/// <param name="i">index subscript</param>
 		/// <param name="defaultValue"></param>
 		/// <returns>The truth.</returns>
-		public bool optBoolean(int i, bool defaultValue)
+		public int(0..1) optBoolean(int i, int(0..1)|void defaultValue)
 		{
-			object obj = opt(i);
-			if (obj != null)
+			mixed obj = opt(i);
+			if (obj)
 			{
-				return (bool)obj;
+			  return 1;
 			}
-			return defaultValue;
-		}
-
-		/// <summary>
-		/// Get the optional double value associated with an index.
-		/// NaN is returned if the index is not found,
-		/// or if the value is not a number and cannot be converted to a number.
-		/// </summary>
-		/// <param name="i">index subscript</param>
-		/// <returns>The double value object</returns>
-		public double optDouble(int i)
-		{
-			return optDouble(i,double.NaN);
+                        else return 0;
 		}
 
 		/// <summary>
@@ -410,23 +355,21 @@
 		/// <param name="i">index subscript</param>
 		/// <param name="defaultValue"></param>
 		/// <returns>The double value object</returns>
-		public double optDouble(int i, double defaultValue)
+		public float optDouble(int i)
 		{
-			object obj = opt(i);
-			if (obj != null)
+			mixed obj = opt(i);
+			if (obj)
 			{
-				if (obj is double)
-					return (double)obj;
-				if (obj is float)
+				if (floatp(obj))
 					return (float)obj;
-				if (obj is string)
+				if (stringp(obj))
 				{
-					return Convert.ToDouble(obj);
+					return (float)obj;
 				}				
-				string msg = string.Format("JSONArray[{0}]={1} not a double", i, obj);
-				throw new Exception(msg);
+				string msg = sprintf("JSONArray[%O]=%O not a double", i, obj);
+				throw(Error.Generic(msg));
 			}
-			return defaultValue;
+			return 0;
 		}
 
 		/// <summary>
@@ -436,10 +379,6 @@
 		/// </summary>
 		/// <param name="i">index subscript</param>
 		/// <returns>The int value object</returns>
-		public int optInt(int i)
-		{
-			return optInt(i,0);
-		}
 
 		/// <summary>
 		/// Get the optional int value associated with an index.
@@ -449,19 +388,19 @@
 		/// <param name="i">index subscript</param>
 		/// <param name="defaultValue">The default value</param>
 		/// <returns>The int value object</returns>
-		public int optInt(int i, int defaultValue)
+		public int optInt(int i)
 		{
-			object obj = opt(i);
-			if (obj != null)
+			mixed obj = opt(i);
+			if (obj)
 			{
-				if (obj is int)
-					return (int)obj;
-				if (obj is string)
-					return Convert.ToInt32(obj);			
-				string msg = string.Format("JSONArray[{0}]={1} not a int", i, obj);
-				throw new Exception(msg);
+				if (intp(obj))
+					return obj;
+				if (stringp(obj))
+					return (int)(obj);			
+				string msg = sprintf("JSONArray[%O]=%O not a int", i, obj);
+				throw(Error.Generic(msg));
 			}
-			return defaultValue;
+			return UNDEFINED;
 		}
 
 		/// <summary>
@@ -471,10 +410,10 @@
 		/// <returns>A JSONArray value, or null if the index has no value, or if the value is not a JSONArray.</returns>
 		public JSONArray optJSONArray(int i)
 		{
-			object obj = opt(i);
-			if (obj is JSONArray)
-				return (JSONArray)obj;
-			return null;
+			mixed obj = opt(i);
+			if (objectp(obj))
+				return obj;
+			return UNDEFINED;
 		}
 
 		/// <summary>
@@ -486,12 +425,12 @@
 		/// <returns>A JSONObject value</returns>
 		public JSONObject optJSONObject(int i)
 		{
-			object obj = opt(i);
-			if (obj is JSONObject)
+			mixed obj = opt(i);
+			if (objectp(obj))
 			{
-				return (JSONObject)obj;
+				return obj;
 			}
-			return null;
+			return UNDEFINED;
 		}
 
 		/// <summary>
@@ -501,10 +440,6 @@
 		/// </summary>
 		/// <param name="i">index subscript</param>
 		/// <returns>A String value</returns>
-		public string optString(int i)
-		{
-			return optString(i, "");
-		}
 
 		/// <summary>
 		/// Get the optional string associated with an index.
@@ -513,19 +448,17 @@
 		/// <param name="i">index subscript</param>
 		/// <param name="defaultValue">The default value</param>
 		/// <returns>A string value</returns>
-		public string optString(int i, string defaultValue)
+		public string optString(int i, string|void defaultValue)
 		{
-			object obj = opt(i);
-			if (obj != null)
+			mixed obj = opt(i);
+			if (obj)
 			{
-				return obj.ToString();
+				return (string)obj;
 			}
 			return defaultValue;
 		}
 
-		#endregion
 
-		#region Put methods - use indexer instead
 /**
  * OMITTED:
  * public JSONArray put(bool val)
@@ -537,11 +470,6 @@
 		/// </summary>
 		/// <param name="val">An object value.  The value should be a Boolean, Double, Integer, JSONArray, JSObject, or String, or the JSONObject.NULL object</param>
 		/// <returns>this (JSONArray)</returns>
-		public JSONArray put(object val)
-		{
-			myArrayList.Add(val);
-			return this;
-		}
 
 /*
  * OMITTED:
@@ -558,32 +486,31 @@
 		/// </param>
 		/// <param name="val">An object value.</param>
 		/// <returns>this (JSONArray)</returns>
-		public JSONArray put(int i, object val)
+		public JSONArray put(int i, mixed val)
 		{
 			if (i < 0)
 			{
-				throw new ArgumentOutOfRangeException("i", i, "Negative indexes illegal");
+				throw(Error.Generic("Negative indexes illegal"));
 			}
-			else if (val == null)
+			else if (!val && zero_type(val))
 			{
-				throw new ArgumentNullException("val", "Object cannt be null");
+				throw(Error.Generic("Object cannt be null"));
 			}
-			else if (i < myArrayList.Count)
+			else if (i < sizeof(myArrayList))
 			{
-				myArrayList.Insert(i, val);
+				myArrayList[i] = val;
 			}
 			// NOTE! Since i is >= Count, fill null vals before index i, then append new object at i
 			else
 			{
-				while (i != myArrayList.Count)
+				while (i != sizeof(myArrayList))
 				{
-					myArrayList.Add(null);
+					myArrayList+=({UNDEFINED});
 				}
-				myArrayList.Add(val);
+				myArrayList+=({val});
 			}
 			return this;
 		}
-		#endregion
 
 		/// <summary>
 		/// Produce a JSONObject by combining a JSONArray of names with the values
@@ -595,14 +522,14 @@
 		/// <returns>A JSONObject, or null if there are no names or if this JSONArray</returns>
 		public JSONObject toJSONObject(JSONArray names)
 		{
-			if (names == null || names.Length() == 0 || this.Length() == 0) 
+			if (!names || sizeof(names) == 0 || sizeof(this) == 0) 
 			{
-				return null;
+				return 0;
 			}
-			JSONObject jo = new JSONObject();
-			for (int i=0; i <names.Length(); i++)
+			JSONObject jo = JSONObject();
+			for (int i=0; i <sizeof(names); i++)
 			{
-				jo.put(names.getString(i),this.opt(i));
+				jo->put((string)names[i], opt(i));
 			}
 			return jo;
 		}
@@ -612,9 +539,16 @@
 		/// unnecessary whitespace is added.
 		/// </summary>
 		/// <returns>a printable, displayable, transmittable representation of the array.</returns>
-		public override string ToString()
+
+static mixed cast(string to)
+{
+  if(to == "string")
+    return ToString();
+  if(to == "array")
+    return copy_value(getArrayList());
+}
+
+		public string ToString()
 		{
 			return '['+ join(",") + ']';
 		}
-	}
-}

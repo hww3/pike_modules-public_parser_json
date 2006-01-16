@@ -15,7 +15,7 @@
 			String.Buffer sb = String.Buffer(len + 4);
 			string       t;
 
-			sb+=('"');
+			sb+=("\"");
 			for (i = 0; i < len; i += 1) 
 			{
 				c = s[i];

@@ -105,7 +105,6 @@
 		/// object than to use C#'s null value.
 		/// JSONObject.NULL.toString() returns "null".
 		/// </summary>
-		public JSONNull NULL = JSONNull();
 
 		/// <summary>
 		///  Construct an empty JSONObject.
@@ -125,8 +124,8 @@
                      }
                      if(mappingp(x))
                      {
-			myHashMap      = copy_value(map);
-			myKeyIndexList = indices(map);
+			myHashMap      = copy_value(x);
+			myKeyIndexList = indices(x);
                      }
 		}
 
@@ -158,7 +157,7 @@
 						return;
 					default:
 						x->back();
-						key = x->nextObject()->ToString();
+						key = (string)x->nextObject();
 						break;
 				}
 				if (x->nextClean() != ':') 
@@ -230,16 +229,16 @@
 			{
 				put(key, val);
 			}
-			else if (Program.implements(object_program(obj), JSONArray)
+			else if (Program.implements(object_program(obj), JSONArray))
 			{
 				a = obj;
-				a->put(val);
+				a->put(sizeof(a), val);
 			}
 			else
 			{
 				a = JSONArray();
-				a->put(obj);
-				a->put(val);
+				a->put(sizeof(a), obj);
+				a->put(sizeof(a), val);
 				put(key,a);
 			}
 			return this;
@@ -271,7 +270,6 @@
 		}
 
 
-		#region Gettes for a value associated with a key - use indexer instead
 		/// <summary>
 		/// Alias to Java get method
 		/// Get the value object associated with a key.
@@ -281,8 +279,8 @@
 		public object getValue(string key)
 		{
 			//return myHashMap[key];
-			object obj = opt(key);
-			if (obj == null)
+			mixed obj = opt(key);
+			if (!obj && zero_type(obj))
 			{
 				throw(Error.Generic("No such element"));
 			}
@@ -340,7 +338,7 @@
 				return (int)o;
 			}
 
-			if (o is string)
+			if (stringp(o))
 			{
 				return (int)(o);
 			}
@@ -389,7 +387,6 @@
 		{
 			return (string)getValue(key);
 		}
-		#endregion
 
 
 		/// <summary>
@@ -416,6 +413,11 @@
 			return indices(myHashMap);
 		}
 
+		static array _values()
+		{
+			return values(myHashMap);
+		}
+
 		/// <summary>
 		/// Determine if the value associated with the key is null or if there is no value.
 		/// </summary>
@@ -423,7 +425,7 @@
 		/// <returns>true if there is no value associated with the key or if the valus is the JSONObject.NULL object</returns>
 		public int(0..1) isNull(string key)
 		{
-			return NULLObject.Equals(opt(key));
+			return NULLObject.equals(opt(key));
 		}
 
 		/// <summary>
@@ -443,9 +445,8 @@
 		/// <returns>String representation of the number</returns>
 		public string numberToString(mixed number)
 		{
-			if (floatp(number) && !(float)number))
+			if (floatp(number) && !(float)number)
 			{
-				string msg = string.Format("");
 				throw(Error.Generic("object must be a valid number"));
 			}
 
@@ -455,17 +456,17 @@
 			{
 				while(has_suffix(s, "0"))
 				{
-					s= s[0,sizeof(s)-1)];
+					s= s[0..sizeof(s)-2];
 				}
 				if (has_suffix(s, "."))
 				{
-					s=s[0,s.Length-1];
+					s=s[0.. sizeof(s)-2];
 				}
 			}
+werror("returning %O\n", s);
 			return s;
 		}
 
-		#region Get an optional value associated with a key.
 		/// <summary>
 		/// Get an optional value associated with a key.
 		/// </summary>
@@ -538,7 +539,6 @@
 				}
 			}
 			return defaultValue;
-		}
 
 		}
 
@@ -559,7 +559,7 @@
 				if (intp(obj))
 					return (int)obj;
 				if (stringp(obj))
-					return (string)obj;
+					return (int)obj;
 			}
 			return defaultValue;
 		}
@@ -603,12 +603,6 @@
 		/// </summary>
 		/// <param name="key">A key string.</param>
 		/// <returns>A string which is the value.</returns>
-		public string optString(string key)
-		{
-			object obj = opt(key);
-
-			return optString(key, "");
-		}
 
 		/// <summary>
 		/// Get an optional string associated with a key.
@@ -617,18 +611,16 @@
 		/// <param name="key">A key string.</param>
 		/// <param name="defaultValue">The default</param>
 		/// <returns>A string which is the value.</returns>
-		public string optString(string key, string defaultValue)
+		public string optString(string key, string|void defaultValue)
 		{
 			mixed obj = opt(key);
-			if (obj != null)
+			if (obj)
 			{
 				return (string)obj;
 			}
-			return defaultValue;
+			return defaultValue ||"";
 		}
-		#endregion
 
-		#region Put methods for adding key/value pairs
 		// OMITTED - all put methods can be replaced by a indexer in C#
 		//         - ===================================================
 		// public JSONObject put(String key, boolean value)
@@ -718,20 +710,28 @@
 			JSONArray ja = JSONArray();
 			for (int i=0; i<sizeof(names); i++)
 			{
-				ja->put(this->opt(names->getString(i)));
+			  ja->put(sizeof(ja), this->opt(names->getString(i)));
 			}
 			return ja;
 		}
+
+static mixed cast(string to)
+{
+  if(to =="string")
+    return ToString();
+  if(to =="mapping")
+    return copy_value(myHashMap);
+}
 
     /// <summary>
     /// Overridden to return a JSON formattet object as a string
     /// </summary>
     /// <returns>JSON object as formatted string</returns>
-		public override string ToString()
+		public string ToString()
 		{
 			mixed obj;
 			//string s;
-			String.Buffer sb = new String.Buffer();
+			String.Buffer sb = String.Buffer();
 
 			sb+=("{");
 			foreach (myHashMap;string key;mixed val)  //NOTE! Could also use myKeyIndexList !!!
@@ -750,12 +750,13 @@
 					}
 					else if (floatp(obj))
 					{
+                                               werror("encoding float\n");
 						sb+=(numberToString(obj));
 					}
 					// boolean is a problem...
 					else
 					{
-						sb+=(obj->ToString());
+						sb+=((string)obj);
 					}
 				}
 			}

@@ -73,7 +73,7 @@
 		/// Determine if the source string still contains characters that next() can consume.
 		/// </summary>
 		/// <returns>true if not yet at the end of the source.</returns>
-		public bool more()
+		public int more()
 		{
 			return myIndex < sizeof(mySource);
 		}
@@ -238,8 +238,11 @@
 		/// </summary>
 		/// <param name="d">A delimiter character.</param>
 		/// <returns>A string.</returns>
-		public string nextTo(int d)
+		public string nextTo(int|string d)
 		{
+                 
+                     if(intp(d))
+                     {
 			String.Buffer sb = String.Buffer();
 			while (1)
 			{
@@ -254,31 +257,26 @@
 				}
 				sb+=String.int2char(c);
 			}
-		}
+		     }    
 
-		/// <summary>
-		///  Get the text up but not including one of the specified delimeter
-		///  characters or the end of line, which ever comes first.
-		/// </summary>
-		/// <param name="delimiters">A set of delimiter characters.</param>
-		/// <returns>A string, trimmed.</returns>
-		public string nextTo(string delimiters)
-		{
+    		     else if(stringp(d))
+                     {
 			int c;
 			String.Buffer sb = String.Buffer();
 			while (1)
 			{
 				c = next();
-				if ((delimiters[c] >= 0) || (c == 0 ) || (c == '\n') || (c == '\r'))
+				if ((d[c] >= 0) || (c == 0 ) || (c == '\n') || (c == '\r'))
 				{
 					if (c != 0)
 					{
 						back();
 					}
-					return String.trim_whites(sb->get);
+					return String.trim_whites(sb->get());
 				}
 				sb+=String.int2char(c);
 			}
+                    }
 		}
 
 		/// <summary>
@@ -286,7 +284,7 @@
 		/// JSONArray, JSONObject, or String, or the JSONObject.NULL object.
 		/// </summary>
 		/// <returns>An object.</returns>
-		public object nextObject()
+		public mixed nextObject()
 		{
 			int c = nextClean();
 			string s;
@@ -406,20 +404,17 @@
 		/// and convert plus to space. There are Web transport systems that insist on
 		/// doing unnecessary URL encoding. This provides a way to undo it.
 		/// </summary>
-		public void unescape()
-		{
-			mySource = unescape(mySource);
-		}
 
 		/// <summary>
 		/// Convert %hh sequences to single characters, and convert plus to space.
 		/// </summary>
 		/// <param name="s">A string that may contain plus and %hh sequences.</param>
 		/// <returns>The unescaped string.</returns>
-		public static string unescape(string s)
+		public string unescape(string|void s)
 		{
+                        if(!s) s = mySource;
 			int len = sizeof(s);
-			String.Buffer sb = new String.Buffer();
+			String.Buffer sb = String.Buffer();
 			for (int i=0; i < len; i++)
 			{
 				int c = s[i];
@@ -441,4 +436,3 @@
 			}
 			return sb->get();
 		}
-	}
